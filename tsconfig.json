@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "outDir": "./build",
+        "sourceMap": true,
+        "allowJs": true,
+        "target": "es6"
+    },
+    "references": [
+        { "path": "../SPARQLBuilder" }
+    ],
+    "include": [
+        "./src/**/*",
+        "./test/**/*"
+    ]
+}

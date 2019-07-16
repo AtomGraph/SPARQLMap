@@ -1,0 +1,29 @@
+{
+    "name": "Geo",
+    "author": {
+        "name": "Martynas Jusevičius",
+        "email": "martynas@atomgraph.com",
+        "url": "https://github.com/AtomGraph"
+    },
+    "version": "0.0.1",
+    "main": "./lib/main.js",
+    "types": "./lib/main.d.ts",
+    "scripts": {
+        "test": "mocha -r ts-node/register test/**/*.ts"
+    },
+    "dependencies": {
+        "@types/jquery": "^3.3.30",
+        "@types/sparqljs": "^2.1.0",
+        "whatwg-fetch": "^3.0.0"
+    },
+    "devDependencies": {
+        "@types/googlemaps": "^3.37.0",
+        "chai": "4.1.x",
+        "mocha": "4.1.x",
+        "ts-loader": "^5.3.3",
+        "ts-node": "^8.0.3",
+        "typescript": "^3.3.3333",
+        "webpack": "^4.29.6",
+        "webpack-cli": "^3.3.0"
+    }
+}
