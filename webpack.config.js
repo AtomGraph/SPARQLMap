@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/index.ts',
+  entry: './src/com/atomgraph/platform/client/Map.ts',
   mode: 'development',
   devtool: 'inline-source-map',
   module: {
@@ -17,9 +17,9 @@ module.exports = {
     extensions: [ '.ts', '.js' ]
   },
   output: {
-    library: ["Geo"],
+    library: ["SPARQLMap"],
     libraryTarget: "window",
-    filename: 'Geo.js',
+    filename: 'SPARQLMap.js',
     path: path.resolve(__dirname, 'dist')
   }
 };
