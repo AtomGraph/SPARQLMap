@@ -7,7 +7,8 @@
         "target": "es6"
     },
     "references": [
-        { "path": "../SPARQLBuilder" }
+        { "path": "../SPARQLBuilder" },
+        { "path": "../URLBuilder" }
     ],
     "include": [
         "./src/**/*",

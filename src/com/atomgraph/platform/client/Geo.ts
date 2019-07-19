@@ -1,10 +1,9 @@
 /// <reference types="googlemaps" />
 
 // import { Map, LatLng, LatLngBounds, Marker, InfoWindow } from 'googlemaps'; // using <reference> instead as otherwise we would get the "@types/googlemaps/index.d.ts is not a module" error
-import { SelectBuilder } from '../../../../../../SPARQLBuilder/src/com/atomgraph/platform/query/SelectBuilder';
 import { MapOverlay } from './geo/MapOverlay';
-
-/* global google, UriBuilder */
+import { SelectBuilder } from '../../../../../../SPARQLBuilder/src/com/atomgraph/platform/query/SelectBuilder';
+import { URLBuilder } from '../../../../../../URLBuilder/src/com/atomgraph/platform/util/URLBuilder';
 
 export class Geo
 {
@@ -111,11 +110,11 @@ export class Geo
 
         let query = this.getSelectBuilder().toString();
 
-        //let url = UriBuilder.fromUri(this.getEndpoint()).
-        //    queryParam("query", query).
-        //    build();
+        let url = URLBuilder.fromURL(this.getEndpoint()).
+            searchParam("query", query).
+            build();
 
-        let req = new Request("https://atomgraph.com", { "headers": { "Accept": "application/rdf+xml" } } );
+        let req = new Request(url.toString(), { "headers": { "Accept": "application/rdf+xml" } } );
         fetch(req).then(response =>
             {
                 if(response.ok) return response.text();
@@ -227,22 +226,19 @@ export class Geo
 
     private bindMarkerClick(marker: google.maps.Marker, uri: string, overlay: MapOverlay): void
     {
-        marker.addListener("click", function()
-        {
-            this.openInfoWindow(marker, uri, overlay);
-        }.bind(this));
+        marker.addListener("click", (marker: google.maps.Marker, uri: string, overlay: MapOverlay) => this.openInfoWindow(marker, uri, overlay));
     };
 
     private openInfoWindow(marker: google.maps.Marker, uri: string, overlay: MapOverlay): void
     {
         overlay.show();
         
-        let url = UriBuilder.fromUri(uri).
-            queryParam("mode", Geo.APLT_NS + "InfoWindowMode").
-            fragment(null).
+        let url = URLBuilder.fromString(uri).
+            searchParam("mode", Geo.APLT_NS + "InfoWindowMode").
+            hash(null).
             build();
 
-        let req = new Request("https://atomgraph.com", { "headers": { "Accept": "application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" } } );
+        let req = new Request(url.toString(), { "headers": { "Accept": "application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" } } );
         fetch(req).then(response =>
             {
                 if(response.ok) return response.text();
