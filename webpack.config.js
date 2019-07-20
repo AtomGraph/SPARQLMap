@@ -1,4 +1,5 @@
 const path = require('path');
+const { TsConfigPathsPlugin } = require('awesome-typescript-loader');
 
 module.exports = {
   entry: './src/com/atomgraph/platform/client/Map.ts',
@@ -8,13 +9,16 @@ module.exports = {
     rules: [
       {
         test: /\.ts?$/,
-        use: 'ts-loader',
+        loader: 'awesome-typescript-loader',
         exclude: /node_modules/
       }
     ]
   },
   resolve: {
-    extensions: [ '.ts', '.js' ]
+    extensions: [ '.ts', '.js' ],
+    plugins: [
+      new TsConfigPathsPlugin()
+    ]
   },
   output: {
     library: ["SPARQLMap"],
