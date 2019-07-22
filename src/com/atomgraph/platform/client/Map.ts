@@ -18,16 +18,18 @@ export class Geo
     private readonly map: google.maps.Map;
     private readonly endpoint: URL;
     private readonly selectBuilder: SelectBuilder;
+    private readonly itemVarName: string;
     private readonly loadedResources: Map<URL, boolean>;
     private loadedBounds: google.maps.LatLngBounds | null | undefined;
     private readonly icons: string[];
     private readonly typeIcons: Map<string, string>;
 
-    constructor(map: google.maps.Map, endpoint: URL, selectBuilder: SelectBuilder)
+    constructor(map: google.maps.Map, endpoint: URL, selectBuilder: SelectBuilder, itemVarName: string)
     {
         this.map = map;
         this.endpoint = endpoint;
         this.selectBuilder = selectBuilder;
+        this.itemVarName = itemVarName;
         this.loadedResources = new Map<URL, boolean>();
         this.icons = [ "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
             "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
@@ -50,6 +52,11 @@ export class Geo
     private getSelectBuilder(): SelectBuilder
     {
         return this.selectBuilder;
+    };
+
+    private getItemVarName(): string
+    {
+        return this.itemVarName;
     };
 
     private getLoadedResources(): Map<URL, boolean>
@@ -79,13 +86,11 @@ export class Geo
 
     private buildQuery(east: number, north: number, south: number, west: number): DescribeBuilder
     {
-        let itemVarName = "thing";
-
         return <DescribeBuilder>DescribeBuilder.new().
             where(DescribeBuilder.group([
                 <SelectQuery>this.getSelectBuilder().
-                    bgpTriple({ subject: SelectBuilder.var(itemVarName), predicate: SelectBuilder.uri(Geo.GEO_NS + "lat"), object: SelectBuilder.var("lat") }).
-                    bgpTriple({ subject: SelectBuilder.var(itemVarName), predicate: SelectBuilder.uri(Geo.GEO_NS + "long"), object: SelectBuilder.var("long") }).
+                    bgpTriple({ subject: SelectBuilder.var(this.getItemVarName()), predicate: SelectBuilder.uri(Geo.GEO_NS + "lat"), object: SelectBuilder.var("lat") }).
+                    bgpTriple({ subject: SelectBuilder.var(this.getItemVarName()), predicate: SelectBuilder.uri(Geo.GEO_NS + "long"), object: SelectBuilder.var("long") }).
                     where(SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(east.toString(), Geo.XSD_NS + "decimal") ]))).
                     where(SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(north.toString(), Geo.XSD_NS + "decimal") ]))).
                     where(SelectBuilder.filter(SelectBuilder.operation(">", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(south.toString(), Geo.XSD_NS + "decimal") ]))).
