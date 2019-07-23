@@ -4,6 +4,7 @@
 import { MapOverlay } from './map/MapOverlay';
 import { SelectBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/platform/query/SelectBuilder';
 import { DescribeBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/platform/query/DescribeBuilder';
+import { QueryBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/platform/query/QueryBuilder';
 import { FilterPattern, OperationExpression, SelectQuery } from 'sparqljs';
 import { URLBuilder } from '@atomgraph/URLBuilder/com/atomgraph/platform/util/URLBuilder';
 
@@ -14,6 +15,7 @@ export class Geo
     public static readonly XSD_NS = "http://www.w3.org/2001/XMLSchema#";
     public static readonly APLT_NS = "http://atomgraph.com/ns/platform/templates#";
     public static readonly GEO_NS = "http://www.w3.org/2003/01/geo/wgs84_pos#"
+    public static readonly FOAF_NS = "http://xmlns.com/foaf/0.1/";
 
     private readonly map: google.maps.Map;
     private readonly endpoint: URL;
@@ -84,22 +86,7 @@ export class Geo
         return this.typeIcons;
     };
 
-    private buildQuery(east: number, north: number, south: number, west: number): DescribeBuilder
-    {
-        return <DescribeBuilder>DescribeBuilder.new().
-            where(DescribeBuilder.group([
-                <SelectQuery>this.getSelectBuilder().
-                    bgpTriple({ subject: SelectBuilder.var(this.getItemVarName()), predicate: SelectBuilder.uri(Geo.GEO_NS + "lat"), object: SelectBuilder.var("lat") }).
-                    bgpTriple({ subject: SelectBuilder.var(this.getItemVarName()), predicate: SelectBuilder.uri(Geo.GEO_NS + "long"), object: SelectBuilder.var("long") }).
-                    where(SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(east.toString(), Geo.XSD_NS + "decimal") ]))).
-                    where(SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(north.toString(), Geo.XSD_NS + "decimal") ]))).
-                    where(SelectBuilder.filter(SelectBuilder.operation(">", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(south.toString(), Geo.XSD_NS + "decimal") ]))).
-                    where(SelectBuilder.filter(SelectBuilder.operation(">", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(west.toString(), Geo.XSD_NS + "decimal") ]))).
-                    build()
-                ]));
-    };
-
-    private loadMarkers(promise: (rdfXml: Document) => (void)): void
+    private loadMarkers(this: Geo, promise: (this: void, rdfXml: Document) => (void)): void
     {
         if (this.getMap().getBounds() == null) throw Error("Map bounds are null or undefined");
 
@@ -112,36 +99,32 @@ export class Geo
         let markerOverlay = new MapOverlay(this.getMap(), "marker-progress");
         markerOverlay.show();
 
-        let query = this.buildQuery(this.getMap().getBounds()!.getNorthEast().lng(),
-            this.getMap().getBounds()!.getNorthEast().lat(),
-            this.getMap().getBounds()!.getSouthWest().lat(),
-            this.getMap().getBounds()!.getSouthWest().lng()).
-            toString();
-
-        let url = URLBuilder.fromURL(this.getEndpoint()).
-            searchParam("query", query).
-            build();
-
-        let req = new Request(url.toString(), { "headers": { "Accept": "application/rdf+xml" } } );
-        fetch(req).then(response =>
+        Promise.resolve(this.getSelectBuilder()).
+            then(this.buildQuery).
+            then(this.buildQueryURL).
+            then(url => url.toString()).
+            then(this.requestRDFXML).
+            then(response =>
             {
                 if(response.ok) return response.text();
+
                 throw new Error("Could not load RDF/XML response from '" + response.url + "'");
             }).
-            then(str => (new DOMParser()).parseFromString(str, "text/xml")).
+            then(this.parseXML).
             then(promise).
             then(() =>
             {
                 this.setLoadedBounds(this.getMap().getBounds());
+
                 markerOverlay.hide();
             }).
             catch(error =>
             {
-                console.log('There has been a problem with your fetch operation: ', error.message);
+                console.log('HTTP request failed: ', error.message);
             });
     };
 
-    public addMarkers(rdfXml: XMLDocument): void
+    public addMarkers = (rdfXml: XMLDocument) =>
     {   
         let descriptions = rdfXml.getElementsByTagNameNS(Geo.RDF_NS, "Description");
         for (let description of <any>descriptions)
@@ -190,18 +173,15 @@ export class Geo
                         let marker = new google.maps.Marker(markerConfig);
                         if (icon != null) marker.setIcon(icon);
                         
-                        //console.log("Marker URI: " + uri);
                         // popout InfoWindow for the topic of current document (same as on click)
-                        let docs = description.getElementsByTagNameNS("http://xmlns.com/foaf/0.1/", "isPrimaryTopicOf");
-                        //console.log("Docs: " + docs[0]);
+                        let docs = description.getElementsByTagNameNS(Geo.FOAF_NS, "isPrimaryTopicOf");
+
                         if (docs.length > 0 && docs[0].hasAttributeNS(Geo.RDF_NS, "resource"))
                         {
-                            let infoWindowOverlay = new MapOverlay(this.getMap(), "infowindow-progress");
-                            
                             let docUri = docs[0].getAttributeNS(Geo.RDF_NS, "resource");
-                            this.bindMarkerClick(marker, docUri, infoWindowOverlay); // bind openInfoWindow() to marker onclick
-                            
-                            //if (docUri === this.getMap().getDiv().ownerDocument.documentURI) this.openInfoWindow(marker, docUri, infoWindowOverlay);
+                            this.bindMarkerClick(marker, docUri); // bind loadInfoWindowHTML() to marker onclick
+
+                            //if (docUri === this.getMap().getDiv().ownerDocument.documentURI) this.loadInfoWindowHTML(marker, docUri);
                         }
                     }
                 }
@@ -209,40 +189,103 @@ export class Geo
         }
     };
 
-    private bindMarkerClick(marker: google.maps.Marker, uri: string, overlay: MapOverlay): void
+    protected bindMarkerClick(marker: google.maps.Marker, url: string): void
     {
-        marker.addListener("click", (marker: google.maps.Marker, uri: string, overlay: MapOverlay) => this.openInfoWindow(marker, uri, overlay));
+        let renderInfoWindow = (event: google.maps.MouseEvent) =>
+        {
+            let overlay = new MapOverlay(this.getMap(), "infowindow-progress");
+            overlay.show();
+            
+            Promise.resolve(url).
+                then(this.buildInfoURL).
+                then(url => url.toString()).
+                then(this.requestHTML).
+                then(response => 
+                {
+                    if(response.ok) return response.text();
+
+                    throw new Error("Could not load HTML response from '" + response.url + "'");
+                }).
+                then(this.parseHTML).
+                then(html =>
+                {
+                    // render first child of <body> as InfoWindow content
+                    let infoContent = html.getElementsByTagNameNS("http://www.w3.org/1999/xhtml", "body")[0].children[0];
+
+                    let infoWindow = new google.maps.InfoWindow({ "content" : infoContent });
+                    overlay.hide();
+                    infoWindow.open(this.getMap(), marker);
+                }).
+                catch(error =>
+                {
+                    console.log('HTTP request failed: ', error.message);
+                });
+        }
+
+        marker.addListener("click", renderInfoWindow);
     };
 
-    private openInfoWindow(marker: google.maps.Marker, uri: string, overlay: MapOverlay): void
+    protected buildGeoBounderQuery(itemVarName: string, east: number, north: number, south: number, west: number): DescribeBuilder
     {
-        overlay.show();
-        
-        let url = URLBuilder.fromString(uri).
+        return <DescribeBuilder>DescribeBuilder.new().
+            where(DescribeBuilder.group([ <SelectQuery>this.getSelectBuilder().build() ])).
+            where(SelectBuilder.graph(SelectBuilder.var("childGraph"),
+                [
+                    SelectBuilder.bgp(
+                    [
+                        SelectBuilder.triple(SelectBuilder.var(itemVarName), SelectBuilder.uri(Geo.GEO_NS + "lat"), SelectBuilder.var("lat")),
+                        SelectBuilder.triple(SelectBuilder.var(itemVarName), SelectBuilder.uri(Geo.GEO_NS + "long"), SelectBuilder.var("long"))
+                    ]),
+                    SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(east.toString(), Geo.XSD_NS + "decimal") ])),
+                    SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(north.toString(), Geo.XSD_NS + "decimal") ])),
+                    SelectBuilder.filter(SelectBuilder.operation(">", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(south.toString(), Geo.XSD_NS + "decimal") ])),
+                    SelectBuilder.filter(SelectBuilder.operation(">", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(west.toString(), Geo.XSD_NS + "decimal") ]))
+                ]
+            ));
+    };
+
+    public buildQuery = (queryBuilder: QueryBuilder): QueryBuilder =>
+    {
+        return this.buildGeoBounderQuery(this.getItemVarName(),
+            this.getMap().getBounds()!.getNorthEast().lng(),
+            this.getMap().getBounds()!.getNorthEast().lat(),
+            this.getMap().getBounds()!.getSouthWest().lat(),
+            this.getMap().getBounds()!.getSouthWest().lng());
+    }
+
+    public buildQueryURL = (queryBuilder: QueryBuilder): URL =>
+    {
+        return URLBuilder.fromURL(this.getEndpoint()).
+            searchParam("query", queryBuilder.toString()).
+            build();
+    }
+
+    public buildInfoURL(url: string): URL
+    {
+        return URLBuilder.fromString(url).
             searchParam("mode", Geo.APLT_NS + "InfoWindowMode").
             hash(null).
             build();
+    }
 
-        let req = new Request(url.toString(), { "headers": { "Accept": "application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" } } );
-        fetch(req).then(response =>
-            {
-                if(response.ok) return response.text();
-                throw new Error("Could not load RDF/XML response from '" + response.url + "'");
-            }).
-            then(str => (new DOMParser()).parseFromString(str, "text/xml")). // could be "text/html" with a different Accept header
-            then(html =>
-            {
-                // render first child of <body> as InfoWindow content
-                let infoContent = html.getElementsByTagNameNS("http://www.w3.org/1999/xhtml", "body")[0].children[0];
-                //console.log(infoContent);
-                let infoWindow = new google.maps.InfoWindow({ "content" : infoContent });
-                overlay.hide();
-                infoWindow.open(this.getMap(), marker);
-            }).
-            catch(error =>
-            {
-                console.log('There has been a problem with your fetch operation: ', error.message);
-            });
-    };
+    public requestRDFXML = (url: string): Promise<Response> =>
+    {
+        return fetch(new Request(url, { "headers": { "Accept": "application/rdf+xml" } } ));
+    }
+
+    public requestHTML = (url: string): Promise<Response> =>
+    {
+        return fetch(new Request(url, { "headers": { "Accept": "text/html,*/*;q=0.8" } } ));
+    }
+
+    public parseXML(str: string): Document
+    {
+        return (new DOMParser()).parseFromString(str, "text/xml");
+    }
+
+    public parseHTML(str: string): Document
+    {
+        return (new DOMParser()).parseFromString(str, "text/html");
+    }
 
 }
