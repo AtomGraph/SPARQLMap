@@ -5,7 +5,7 @@ import { MapOverlay } from './map/MapOverlay';
 import { SelectBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/platform/query/SelectBuilder';
 import { DescribeBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/platform/query/DescribeBuilder';
 import { QueryBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/platform/query/QueryBuilder';
-import { FilterPattern, OperationExpression, SelectQuery } from 'sparqljs';
+import { SelectQuery } from 'sparqljs';
 import { URLBuilder } from '@atomgraph/URLBuilder/com/atomgraph/platform/util/URLBuilder';
 
 export class Geo
@@ -19,18 +19,18 @@ export class Geo
 
     private readonly map: google.maps.Map;
     private readonly endpoint: URL;
-    private readonly selectBuilder: SelectBuilder;
+    private readonly select: string;
     private readonly itemVarName: string;
     private readonly loadedResources: Map<URL, boolean>;
     private loadedBounds: google.maps.LatLngBounds | null | undefined;
     private readonly icons: string[];
     private readonly typeIcons: Map<string, string>;
 
-    constructor(map: google.maps.Map, endpoint: URL, selectBuilder: SelectBuilder, itemVarName: string)
+    constructor(map: google.maps.Map, endpoint: URL, select: string, itemVarName: string)
     {
         this.map = map;
         this.endpoint = endpoint;
-        this.selectBuilder = selectBuilder;
+        this.select = select;
         this.itemVarName = itemVarName;
         this.loadedResources = new Map<URL, boolean>();
         this.icons = [ "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
@@ -39,7 +39,7 @@ export class Geo
             "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
             "https://maps.google.com/mapfiles/ms/icons/green-dot.png" ];
         this.typeIcons = new Map<string, string>();
-    };
+    }
 
     private getMap(): google.maps.Map
     {
@@ -49,12 +49,12 @@ export class Geo
     private getEndpoint(): URL
     {
         return this.endpoint;
-    };
+    }
 
-    private getSelectBuilder(): SelectBuilder
+    private getSelect(): string
     {
-        return this.selectBuilder;
-    };
+        return this.select;
+    }
 
     private getItemVarName(): string
     {
@@ -64,27 +64,27 @@ export class Geo
     private getLoadedResources(): Map<URL, boolean>
     {
         return this.loadedResources;
-    };
+    }
 
     public getLoadedBounds(): google.maps.LatLngBounds | null | undefined
     {
         return this.loadedBounds;
-    };
+    }
 
     private setLoadedBounds(bounds?: google.maps.LatLngBounds | null | undefined)
     {
         this.loadedBounds = bounds;
-    };
+    }
 
     public getIcons(): string[]
     {
         return this.icons;
-    };
+    }
 
     public getTypeIcons(): Map<string, string>
     {
         return this.typeIcons;
-    };
+    }
 
     private loadMarkers(this: Geo, promise: (this: void, rdfXml: Document) => (void)): void
     {
@@ -99,7 +99,7 @@ export class Geo
         let markerOverlay = new MapOverlay(this.getMap(), "marker-progress");
         markerOverlay.show();
 
-        Promise.resolve(this.getSelectBuilder()).
+        Promise.resolve(SelectBuilder.fromString(this.getSelect()).build()).
             then(this.buildQuery).
             then(this.buildQueryURL).
             then(url => url.toString()).
@@ -122,7 +122,7 @@ export class Geo
             {
                 console.log('HTTP request failed: ', error.message);
             });
-    };
+    }
 
     public addMarkers = (rdfXml: XMLDocument) =>
     {   
@@ -187,7 +187,7 @@ export class Geo
                 }
             }
         }
-    };
+    }
 
     protected bindMarkerClick(marker: google.maps.Marker, url: string): void
     {
@@ -223,30 +223,31 @@ export class Geo
         }
 
         marker.addListener("click", renderInfoWindow);
-    };
+    }
 
-    protected buildGeoBounderQuery(itemVarName: string, east: number, north: number, south: number, west: number): DescribeBuilder
+    protected buildGeoBounderQuery(selectQuery: SelectQuery, itemVarName: string, east: number, north: number, south: number, west: number): DescribeBuilder
     {
         return <DescribeBuilder>DescribeBuilder.new().
-            where(DescribeBuilder.group([ <SelectQuery>this.getSelectBuilder().build() ])).
+            where(DescribeBuilder.group([ selectQuery ])).
             where(SelectBuilder.graph(SelectBuilder.var("childGraph"),
                 [
                     SelectBuilder.bgp(
-                    [
-                        SelectBuilder.triple(SelectBuilder.var(itemVarName), SelectBuilder.uri(Geo.GEO_NS + "lat"), SelectBuilder.var("lat")),
-                        SelectBuilder.triple(SelectBuilder.var(itemVarName), SelectBuilder.uri(Geo.GEO_NS + "long"), SelectBuilder.var("long"))
-                    ]),
+                        [
+                            SelectBuilder.triple(SelectBuilder.var(itemVarName), SelectBuilder.uri(Geo.GEO_NS + "lat"), SelectBuilder.var("lat")),
+                            SelectBuilder.triple(SelectBuilder.var(itemVarName), SelectBuilder.uri(Geo.GEO_NS + "long"), SelectBuilder.var("long"))
+                        ]),
                     SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(east.toString(), Geo.XSD_NS + "decimal") ])),
                     SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(north.toString(), Geo.XSD_NS + "decimal") ])),
                     SelectBuilder.filter(SelectBuilder.operation(">", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(south.toString(), Geo.XSD_NS + "decimal") ])),
                     SelectBuilder.filter(SelectBuilder.operation(">", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(west.toString(), Geo.XSD_NS + "decimal") ]))
                 ]
             ));
-    };
+    }
 
-    public buildQuery = (queryBuilder: QueryBuilder): QueryBuilder =>
+    public buildQuery = (selectQuery: SelectQuery): QueryBuilder =>
     {
-        return this.buildGeoBounderQuery(this.getItemVarName(),
+        return this.buildGeoBounderQuery(selectQuery,
+            this.getItemVarName(),
             this.getMap().getBounds()!.getNorthEast().lng(),
             this.getMap().getBounds()!.getNorthEast().lat(),
             this.getMap().getBounds()!.getSouthWest().lat(),
