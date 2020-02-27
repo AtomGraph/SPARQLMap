@@ -2,7 +2,7 @@ const path = require('path');
 const { TsConfigPathsPlugin } = require('awesome-typescript-loader');
 
 module.exports = {
-  entry: './src/com/atomgraph/platform/client/Map.ts',
+  entry: './src/com/atomgraph/linkeddatahub/client/Map.ts',
   mode: 'development',
   devtool: 'inline-source-map',
   module: {

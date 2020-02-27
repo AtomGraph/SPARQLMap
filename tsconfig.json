@@ -7,7 +7,7 @@
         "declaration": true,
         "baseUrl": ".",
         "paths": {
-          "@atomgraph/SPARQLBuilder/*": ["../SPARQLBuilder/src/*"],
+          "@atomgraph/SPARQLBuilder/*": ["../sparql-builder/src/*"],
           "@atomgraph/URLBuilder/*": ["../URLBuilder/src/*"],
         },
     },

@@ -1,11 +1,19 @@
 {
-    "name": "Geo",
+    "name": "SPARQLMap",
     "author": {
         "name": "Martynas Jusevičius",
         "email": "martynas@atomgraph.com",
         "url": "https://github.com/AtomGraph"
     },
-    "version": "0.0.1",
+    "license": "Apache-2.0",
+    "version": "0.0.2",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/namedgraph/SPARQLMap.git"
+    },
+    "bugs": {
+        "url": "https://github.com/namedgraph/SPARQLMap/issues"
+    },
     "main": "./dist/SPARQLMap.node.js",
     "types": "./build/src/com/atomgraph/platform/map/Map.d.ts",
     "scripts": {

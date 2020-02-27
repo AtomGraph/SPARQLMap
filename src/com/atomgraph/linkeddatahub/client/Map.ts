@@ -2,18 +2,18 @@
 
 // import { Map, LatLng, LatLngBounds, Marker, InfoWindow } from 'googlemaps'; // using <reference> instead as otherwise we would get the "@types/googlemaps/index.d.ts is not a module" error
 import { MapOverlay } from './map/MapOverlay';
-import { SelectBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/platform/query/SelectBuilder';
-import { DescribeBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/platform/query/DescribeBuilder';
-import { QueryBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/platform/query/QueryBuilder';
+import { SelectBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/linkeddatahub/query/SelectBuilder';
+import { DescribeBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/linkeddatahub/query/DescribeBuilder';
+import { QueryBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/linkeddatahub/query/QueryBuilder';
 import { SelectQuery } from 'sparqljs';
-import { URLBuilder } from '@atomgraph/URLBuilder/com/atomgraph/platform/util/URLBuilder';
+import { URLBuilder } from '@atomgraph/URLBuilder/com/atomgraph/linkeddatahub/util/URLBuilder';
 
 export class Geo
 {
 
     public static readonly RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     public static readonly XSD_NS = "http://www.w3.org/2001/XMLSchema#";
-    public static readonly APLT_NS = "http://atomgraph.com/ns/platform/templates#";
+    public static readonly APLT_NS = "https://w3id.org/atomgraph/linkeddatahub/templates#";
     public static readonly GEO_NS = "http://www.w3.org/2003/01/geo/wgs84_pos#"
     public static readonly FOAF_NS = "http://xmlns.com/foaf/0.1/";
 
