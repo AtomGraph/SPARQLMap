@@ -20,18 +20,20 @@ export class Geo
     private readonly map: google.maps.Map;
     private readonly endpoint: URL;
     private readonly select: string;
-    private readonly itemVarName: string;
+    private readonly focusVarName: string;
+    private readonly graphVarName: string;
     private readonly loadedResources: Map<URL, boolean>;
     private loadedBounds: google.maps.LatLngBounds | null | undefined;
     private readonly icons: string[];
     private readonly typeIcons: Map<string, string>;
 
-    constructor(map: google.maps.Map, endpoint: URL, select: string, itemVarName: string)
+    constructor(map: google.maps.Map, endpoint: URL, select: string, focusVarName: string, graphVarName: string)
     {
         this.map = map;
         this.endpoint = endpoint;
         this.select = select;
-        this.itemVarName = itemVarName;
+        this.focusVarName = focusVarName;
+        this.graphVarName = graphVarName;
         this.loadedResources = new Map<URL, boolean>();
         this.icons = [ "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
             "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
@@ -56,9 +58,14 @@ export class Geo
         return this.select;
     }
 
-    private getItemVarName(): string
+    private getFocusVarName(): string
     {
-        return this.itemVarName;
+        return this.focusVarName;
+    };
+
+    private getGraphVarName(): string
+    {
+        return this.graphVarName;
     };
 
     private getLoadedResources(): Map<URL, boolean>
@@ -225,16 +232,16 @@ export class Geo
         marker.addListener("click", renderInfoWindow);
     }
 
-    protected buildGeoBounderQuery(selectQuery: SelectQuery, itemVarName: string, east: number, north: number, south: number, west: number): DescribeBuilder
+    protected buildGeoBounderQuery(selectQuery: SelectQuery, east: number, north: number, south: number, west: number): DescribeBuilder
     {
         return <DescribeBuilder>DescribeBuilder.new().
-            where(DescribeBuilder.group([ selectQuery ])).
-            where(SelectBuilder.graph(SelectBuilder.var("childGraph"),
+            wherePattern(QueryBuilder.group([ selectQuery ])).
+            wherePattern(QueryBuilder.graph(SelectBuilder.var(this.getGraphVarName()),
                 [
                     SelectBuilder.bgp(
                         [
-                            SelectBuilder.triple(SelectBuilder.var(itemVarName), SelectBuilder.uri(Geo.GEO_NS + "lat"), SelectBuilder.var("lat")),
-                            SelectBuilder.triple(SelectBuilder.var(itemVarName), SelectBuilder.uri(Geo.GEO_NS + "long"), SelectBuilder.var("long"))
+                            SelectBuilder.triple(SelectBuilder.var(this.getFocusVarName()), SelectBuilder.uri(Geo.GEO_NS + "lat"), SelectBuilder.var("lat")),
+                            SelectBuilder.triple(SelectBuilder.var(this.getFocusVarName()), SelectBuilder.uri(Geo.GEO_NS + "long"), SelectBuilder.var("long"))
                         ]),
                     SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(east.toString(), Geo.XSD_NS + "decimal") ])),
                     SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(north.toString(), Geo.XSD_NS + "decimal") ])),
@@ -247,7 +254,6 @@ export class Geo
     public buildQuery = (selectQuery: SelectQuery): QueryBuilder =>
     {
         return this.buildGeoBounderQuery(selectQuery,
-            this.getItemVarName(),
             this.getMap().getBounds()!.getNorthEast().lng(),
             this.getMap().getBounds()!.getNorthEast().lat(),
             this.getMap().getBounds()!.getSouthWest().lat(),
