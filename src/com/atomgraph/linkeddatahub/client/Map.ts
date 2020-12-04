@@ -21,13 +21,13 @@ export class Geo
     private readonly endpoint: URL;
     private readonly select: string;
     private readonly focusVarName: string;
-    private readonly graphVarName: string;
+    private readonly graphVarName?: string;
     private readonly loadedResources: Map<URL, boolean>;
     private loadedBounds: google.maps.LatLngBounds | null | undefined;
     private readonly icons: string[];
     private readonly typeIcons: Map<string, string>;
 
-    constructor(map: google.maps.Map, endpoint: URL, select: string, focusVarName: string, graphVarName: string)
+    constructor(map: google.maps.Map, endpoint: URL, select: string, focusVarName: string, graphVarName?: string)
     {
         this.map = map;
         this.endpoint = endpoint;
@@ -63,7 +63,7 @@ export class Geo
         return this.focusVarName;
     };
 
-    private getGraphVarName(): string
+    private getGraphVarName(): string | undefined
     {
         return this.graphVarName;
     };
@@ -232,7 +232,7 @@ export class Geo
         marker.addListener("click", renderInfoWindow);
     }
 
-    protected buildGeoBoundedQuery(selectQuery: SelectQuery, east: number, north: number, south: number, west: number): DescribeBuilder
+    protected buildGeoBoundedQuery(selectQuery: SelectQuery, east: number, north: number, south: number, west: number): QueryBuilder
     {
         let boundsPattern = [
             QueryBuilder.bgp(
@@ -246,10 +246,14 @@ export class Geo
             QueryBuilder.filter(QueryBuilder.operation(">", [ QueryBuilder.var("long"), QueryBuilder.typedLiteral(west.toString(), Geo.XSD_NS + "decimal") ]))
         ];
 
-        return <DescribeBuilder>DescribeBuilder.new().
+        let builder = DescribeBuilder.new().
             variables([ QueryBuilder.var(this.getFocusVarName()) ]).
-            wherePattern(QueryBuilder.group([ selectQuery ])).
-            wherePattern(QueryBuilder.union([ QueryBuilder.group(boundsPattern), QueryBuilder.graph(QueryBuilder.var(this.getGraphVarName()), boundsPattern) ]));
+            wherePattern(QueryBuilder.group([ selectQuery ]));
+
+        if (this.getGraphVarName() !== undefined)
+            return builder.wherePattern(QueryBuilder.union([ QueryBuilder.group(boundsPattern), QueryBuilder.graph(QueryBuilder.var(this.getGraphVarName()!), boundsPattern) ]))
+        else
+            return builder.wherePattern(QueryBuilder.group(boundsPattern));
     }
 
     public buildQuery = (selectQuery: SelectQuery): string =>
