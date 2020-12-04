@@ -232,38 +232,40 @@ export class Geo
         marker.addListener("click", renderInfoWindow);
     }
 
-    protected buildGeoBounderQuery(selectQuery: SelectQuery, east: number, north: number, south: number, west: number): DescribeBuilder
+    protected buildGeoBoundedQuery(selectQuery: SelectQuery, east: number, north: number, south: number, west: number): DescribeBuilder
     {
-        return <DescribeBuilder>DescribeBuilder.new().
-            wherePattern(QueryBuilder.group([ selectQuery ])).
-            wherePattern(QueryBuilder.graph(SelectBuilder.var(this.getGraphVarName()),
+        let boundsPattern = [
+            QueryBuilder.bgp(
                 [
-                    SelectBuilder.bgp(
-                        [
-                            SelectBuilder.triple(SelectBuilder.var(this.getFocusVarName()), SelectBuilder.uri(Geo.GEO_NS + "lat"), SelectBuilder.var("lat")),
-                            SelectBuilder.triple(SelectBuilder.var(this.getFocusVarName()), SelectBuilder.uri(Geo.GEO_NS + "long"), SelectBuilder.var("long"))
-                        ]),
-                    SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(east.toString(), Geo.XSD_NS + "decimal") ])),
-                    SelectBuilder.filter(SelectBuilder.operation("<", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(north.toString(), Geo.XSD_NS + "decimal") ])),
-                    SelectBuilder.filter(SelectBuilder.operation(">", [ SelectBuilder.var("lat"), SelectBuilder.typedLiteral(south.toString(), Geo.XSD_NS + "decimal") ])),
-                    SelectBuilder.filter(SelectBuilder.operation(">", [ SelectBuilder.var("long"), SelectBuilder.typedLiteral(west.toString(), Geo.XSD_NS + "decimal") ]))
-                ]
-            ));
+                    QueryBuilder.triple(QueryBuilder.var(this.getFocusVarName()), QueryBuilder.uri(Geo.GEO_NS + "lat"), QueryBuilder.var("lat")),
+                    QueryBuilder.triple(QueryBuilder.var(this.getFocusVarName()), QueryBuilder.uri(Geo.GEO_NS + "long"), QueryBuilder.var("long"))
+                ]),
+            QueryBuilder.filter(QueryBuilder.operation("<", [ QueryBuilder.var("long"), QueryBuilder.typedLiteral(east.toString(), Geo.XSD_NS + "decimal") ])),
+            QueryBuilder.filter(QueryBuilder.operation("<", [ QueryBuilder.var("lat"), QueryBuilder.typedLiteral(north.toString(), Geo.XSD_NS + "decimal") ])),
+            QueryBuilder.filter(QueryBuilder.operation(">", [ QueryBuilder.var("lat"), QueryBuilder.typedLiteral(south.toString(), Geo.XSD_NS + "decimal") ])),
+            QueryBuilder.filter(QueryBuilder.operation(">", [ QueryBuilder.var("long"), QueryBuilder.typedLiteral(west.toString(), Geo.XSD_NS + "decimal") ]))
+        ];
+
+        return <DescribeBuilder>DescribeBuilder.new().
+            variables([ QueryBuilder.var(this.getFocusVarName()) ]).
+            wherePattern(QueryBuilder.group([ selectQuery ])).
+            wherePattern(QueryBuilder.union([ QueryBuilder.group(boundsPattern), QueryBuilder.graph(QueryBuilder.var(this.getGraphVarName()), boundsPattern) ]));
     }
 
-    public buildQuery = (selectQuery: SelectQuery): QueryBuilder =>
+    public buildQuery = (selectQuery: SelectQuery): string =>
     {
-        return this.buildGeoBounderQuery(selectQuery,
+        return this.buildGeoBoundedQuery(selectQuery,
             this.getMap().getBounds()!.getNorthEast().lng(),
             this.getMap().getBounds()!.getNorthEast().lat(),
             this.getMap().getBounds()!.getSouthWest().lat(),
-            this.getMap().getBounds()!.getSouthWest().lng());
+            this.getMap().getBounds()!.getSouthWest().lng()).
+            toString();
     }
 
-    public buildQueryURL = (queryBuilder: QueryBuilder): URL =>
+    public buildQueryURL = (queryString: string): URL =>
     {
         return URLBuilder.fromURL(this.getEndpoint()).
-            searchParam("query", queryBuilder.toString()).
+            searchParam("query", queryString).
             build();
     }
 
