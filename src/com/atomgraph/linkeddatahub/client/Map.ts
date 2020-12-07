@@ -24,6 +24,8 @@ export class Geo
     private readonly graphVarName?: string;
     private readonly loadedResources: Map<URL, boolean>;
     private loadedBounds: google.maps.LatLngBounds | null | undefined;
+    private markerBounds: google.maps.LatLngBounds;
+    private fitBounds: boolean;
     private readonly icons: string[];
     private readonly typeIcons: Map<string, string>;
 
@@ -34,6 +36,8 @@ export class Geo
         this.select = select;
         this.focusVarName = focusVarName;
         this.graphVarName = graphVarName;
+        this.markerBounds = new google.maps.LatLngBounds();
+        this.fitBounds = true;
         this.loadedResources = new Map<URL, boolean>();
         this.icons = [ "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
             "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
@@ -83,6 +87,21 @@ export class Geo
         this.loadedBounds = bounds;
     }
 
+    public getMarkerBounds(): google.maps.LatLngBounds
+    {
+        return this.markerBounds;
+    }
+
+    public isFitBounds(): boolean
+    {
+        return this.fitBounds;
+    }
+
+    private setFitBounds(fitBounds: boolean): void
+    {
+        this.fitBounds = fitBounds;
+    }
+
     public getIcons(): string[]
     {
         return this.icons;
@@ -122,6 +141,11 @@ export class Geo
             then(() =>
             {
                 this.setLoadedBounds(this.getMap().getBounds());
+                if (this.isFitBounds() && !this.getMarkerBounds().isEmpty())
+                {
+                    this.getMap().fitBounds(this.getMarkerBounds());
+                    this.setFitBounds(false); // do not fit bounds after the first load
+                }
 
                 markerOverlay.hide();
             }).
@@ -171,6 +195,7 @@ export class Geo
                         }
 
                         let latLng = new google.maps.LatLng(latElems[0].textContent, longElems[0].textContent);
+                        this.getMarkerBounds().extend(latLng);
                         let markerConfig = <google.maps.ReadonlyMarkerOptions>{
                             "position": latLng,
                             // "label": label,
@@ -181,14 +206,13 @@ export class Geo
                         if (icon != null) marker.setIcon(icon);
                         
                         // popout InfoWindow for the topic of current document (same as on click)
-                        let docs = description.getElementsByTagNameNS(Geo.FOAF_NS, "isPrimaryTopicOf");
+                        let docs = description.getElementsByTagNameNS(Geo.FOAF_NS, "isPrimaryTopicOf"); // try to get foaf:isPrimaryTopicOf value first
+                        if (docs.length === 0) docs = description.getElementsByTagNameNS(Geo.FOAF_NS, "page"); // fallback to foaf:page as a second option
 
                         if (docs.length > 0 && docs[0].hasAttributeNS(Geo.RDF_NS, "resource"))
                         {
                             let docUri = docs[0].getAttributeNS(Geo.RDF_NS, "resource");
                             this.bindMarkerClick(marker, docUri); // bind loadInfoWindowHTML() to marker onclick
-
-                            //if (docUri === this.getMap().getDiv().ownerDocument.documentURI) this.loadInfoWindowHTML(marker, docUri);
                         }
                     }
                 }
