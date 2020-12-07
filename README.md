@@ -1,5 +1,5 @@
 # SPARQLMap
-Generic map layout for SPARQL RDF results.
+Client-side map layout for SPARQL RDF results.
 
 It uses a SPARQL query to load RDF resources with coordinates within the bounds of the map, and renders each as a marker, which shows an info window with HTML representation of the resource when clicked.
 
@@ -24,6 +24,13 @@ SPARQLMap can be constructed with the following arguments:
     <dd><code>string</code></dd>
     <dd>Optional graph name variable name, in case marker resources are contained in named graphs</dd>
 </dl>
+
+## Usage
+
+```js
+window.SPARQLMap.geo = new SPARQLMap.Geo(window.SPARQLMap.map, new URL('http://dbpedia.org/sparql'), `SELECT ?s { ?s ?p ?o }`, 's', 'g'); // construct object
+window.LinkedDataHub.map.addListener('idle', function() { window.SPARQLMap.geo.loadMarkers(window.SPARQLMap.geo.addMarkers); }); // binds a handler for the 'idle' event
+```
 
 ## Query building
 
