@@ -43,7 +43,7 @@ SELECT ?s
 
 ### Default graph
 
-Given `focusVarName = 's'` and a current viewport bounds `((51.067080526460764, -2.8555919369506944), (51.905101013931514, 0.07458193695067283))`, the final query executed on the endpoint will look like this:
+Given `focusVarName = 's'` and current viewport bounds `((51.067080526460764, -2.8555919369506944), (51.905101013931514, 0.07458193695067283))`, the final query executed on the endpoint will look like this:
 ```sparql
 PREFIX  geo:  <http://www.w3.org/2003/01/geo/wgs84_pos#>
 PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>
@@ -66,7 +66,7 @@ WHERE
 
 ### Named graph
 
-Given `focusVarName = 's'`, `graphVarName = 'g'` and a current viewport bounds `((51.067080526460764, -2.8555919369506944), (51.905101013931514, 0.07458193695067283))`, the final query executed on the endpoint will look like this:
+Given `focusVarName = 's'`, `graphVarName = 'g'` and current viewport bounds `((51.067080526460764, -2.8555919369506944), (51.905101013931514, 0.07458193695067283))`, the final query executed on the endpoint will look like this:
 ```sparql
 PREFIX  geo:  <http://www.w3.org/2003/01/geo/wgs84_pos#>
 PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>
@@ -102,5 +102,5 @@ WHERE
 ## RDF data conventions
 
 SPARQLMap will currently
-* only recognize `geo:lat` and `geo:long` (from the [WGS84 Geo vocabulary](https://www.w3.org/2003/01/geo/) properties as coordinates.
+* only recognize `geo:lat` and `geo:long` (from the [WGS84 Geo vocabulary](https://www.w3.org/2003/01/geo/)) properties as coordinates.
 * use [`foaf:isPrimaryTopicOf`](http://xmlns.com/foaf/spec/#term_isPrimaryTopicOf) and, as a fallback, [`foaf:page`](http://xmlns.com/foaf/spec/#term_page) values as URLs to load info window HTML from when a marker is clicked. Absent these properties, the info window will not be available for that resource.
