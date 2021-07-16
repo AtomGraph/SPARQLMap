@@ -4,12 +4,16 @@
         "outDir": "./build",
         "sourceMap": true,
         "target": "es6",
+        "lib": [ "dom", "es6", "es2017" ],
         "declaration": true,
         "baseUrl": ".",
         "paths": {
           "@atomgraph/SPARQLBuilder/*": ["../sparql-builder/src/*"],
-          "@atomgraph/URLBuilder/*": ["../URLBuilder/src/*"],
+          "@atomgraph/URLBuilder/*": ["../URLBuilder/src/*"]
         },
+        "types": [
+          "google.maps"
+        ]
     },
     "include": [
         "./src/**/*",

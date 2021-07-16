@@ -1,7 +1,3 @@
-/// <reference types="googlemaps" />
-
-// import { Map } from 'googlemaps'; // using <reference> instead as otherwise we would get the "@types/googlemaps/index.d.ts is not a module" error
-
 export class MapOverlay
 {
 

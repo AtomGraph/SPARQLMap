@@ -1,6 +1,3 @@
-/// <reference types="googlemaps" />
-
-// import { Map, LatLng, LatLngBounds, Marker, InfoWindow } from 'googlemaps'; // using <reference> instead as otherwise we would get the "@types/googlemaps/index.d.ts is not a module" error
 import { MapOverlay } from './map/MapOverlay';
 import { SelectBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/linkeddatahub/query/SelectBuilder';
 import { DescribeBuilder } from '@atomgraph/SPARQLBuilder/com/atomgraph/linkeddatahub/query/DescribeBuilder';
@@ -172,9 +169,8 @@ export class Geo
                 {
                     let latElems = description.getElementsByTagNameNS(Geo.GEO_NS, "lat");
                     let longElems = description.getElementsByTagNameNS(Geo.GEO_NS, "long");
-                    let titleElems = description.getElementsByTagNameNS("http://purl.org/dc/terms/", "title");
                     
-                    if (latElems.length > 0 && longElems.length > 0 && titleElems.length > 0)
+                    if (latElems.length > 0 && longElems.length > 0)
                     {
                         this.getLoadedResources().set(key, true); // mark resource as loaded
 
@@ -196,12 +192,14 @@ export class Geo
 
                         let latLng = new google.maps.LatLng(latElems[0].textContent, longElems[0].textContent);
                         this.getMarkerBounds().extend(latLng);
-                        let markerConfig = <google.maps.ReadonlyMarkerOptions>{
+                        let markerConfig = <google.maps.MarkerOptions>{
                             "position": latLng,
                             // "label": label,
-                            "map": this.getMap(),
-                            "title": titleElems[0].textContent
-                        } ;
+                            "map": this.getMap()
+                        };
+                        let titleElems = description.getElementsByTagNameNS("http://purl.org/dc/terms/", "title"); // TO-DO: call ac:label() via SaxonJS.XPath.evaluate()?
+                        if (titleElems.length > 0) markerConfig.title = titleElems[0].textContent;
+
                         let marker = new google.maps.Marker(markerConfig);
                         if (icon != null) marker.setIcon(icon);
                         
@@ -222,7 +220,7 @@ export class Geo
 
     protected bindMarkerClick(marker: google.maps.Marker, url: string): void
     {
-        let renderInfoWindow = (event: google.maps.MouseEvent) =>
+        let renderInfoWindow = (event: google.maps.MapMouseEvent) =>
         {
             let overlay = new MapOverlay(this.getMap(), "infowindow-progress");
             overlay.show();
