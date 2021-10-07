@@ -15,6 +15,7 @@ export class Geo
     public static readonly FOAF_NS = "http://xmlns.com/foaf/0.1/";
 
     private readonly map: google.maps.Map;
+    private readonly base: URL;
     private readonly endpoint: URL;
     private readonly select: string;
     private readonly focusVarName: string;
@@ -26,9 +27,10 @@ export class Geo
     private readonly icons: string[];
     private readonly typeIcons: Map<string, string>;
 
-    constructor(map: google.maps.Map, endpoint: URL, select: string, focusVarName: string, graphVarName?: string)
+    constructor(map: google.maps.Map, base: URL, endpoint: URL, select: string, focusVarName: string, graphVarName?: string)
     {
         this.map = map;
+        this.base = base;
         this.endpoint = endpoint;
         this.select = select;
         this.focusVarName = focusVarName;
@@ -47,7 +49,12 @@ export class Geo
     private getMap(): google.maps.Map
     {
         return this.map;
-    };
+    }
+
+    private getBase(): URL
+    {
+        return this.base;
+    }
 
     private getEndpoint(): URL
     {
@@ -62,12 +69,12 @@ export class Geo
     private getFocusVarName(): string
     {
         return this.focusVarName;
-    };
+    }
 
     private getGraphVarName(): string | undefined
     {
         return this.graphVarName;
-    };
+    }
 
     private getLoadedResources(): Map<URL, boolean>
     {
@@ -203,15 +210,8 @@ export class Geo
                         let marker = new google.maps.Marker(markerConfig);
                         if (icon != null) marker.setIcon(icon);
                         
-                        // popout InfoWindow for the topic of current document (same as on click)
-                        let docs = description.getElementsByTagNameNS(Geo.FOAF_NS, "isPrimaryTopicOf"); // try to get foaf:isPrimaryTopicOf value first
-                        if (docs.length === 0) docs = description.getElementsByTagNameNS(Geo.FOAF_NS, "page"); // fallback to foaf:page as a second option
-
-                        if (docs.length > 0 && docs[0].hasAttributeNS(Geo.RDF_NS, "resource"))
-                        {
-                            let docUri = docs[0].getAttributeNS(Geo.RDF_NS, "resource");
-                            this.bindMarkerClick(marker, docUri); // bind loadInfoWindowHTML() to marker onclick
-                        }
+                        // popout InfoWindow for the current document on click
+                        if (uri !== null) this.bindMarkerClick(marker, uri); // bind loadInfoWindowHTML() to marker onclick
                     }
                 }
             }
@@ -295,11 +295,12 @@ export class Geo
             build();
     }
 
-    public buildInfoURL(url: string): URL
+    // this is LinkedDataHub-specific URL structure
+    public buildInfoURL = (url: string): URL =>
     {
-        return URLBuilder.fromString(url).
+        return URLBuilder.fromURL(this.getBase()).
+            searchParam("uri", url).
             searchParam("mode", Geo.APLT_NS + "InfoWindowMode").
-            hash(null).
             build();
     }
 
